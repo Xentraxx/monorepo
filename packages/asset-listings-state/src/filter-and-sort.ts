@@ -9,6 +9,8 @@ import {
   type SortState,
 } from '@subway-builder-modded/config';
 
+import { buildCountryCodeSearchTerms } from './country-search';
+
 type SearchableItem<TItem> = {
   entry: TItem;
   searchText: string;
@@ -50,6 +52,7 @@ export function buildAssetSearchText<TItem extends AssetSearchable>(
     values.push(
       item.city_code ?? '',
       item.country ?? '',
+      ...buildCountryCodeSearchTerms(item.country),
       item.location ?? '',
       item.source_quality ?? '',
       item.level_of_detail ?? '',
