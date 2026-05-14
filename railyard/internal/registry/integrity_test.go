@@ -2,6 +2,7 @@ package registry
 
 import (
 	"testing"
+	"time"
 
 	"railyard/internal/config"
 	"railyard/internal/testutil"
@@ -163,4 +164,23 @@ func TestGetInstallableVersionsCapsExplicitMapGameVersionOnSchemaCutoffOrEarlier
 	require.NoError(t, err)
 	require.Len(t, filtered, 1)
 	require.Equal(t, ">=1.0.0 <=1.4.0 <=1.3.0", filtered[0].GameVersion)
+}
+
+func TestParseMapPolicyVersionDate(t *testing.T) {
+	t.Run("date only", func(t *testing.T) {
+		parsed, ok := parseMapPolicyVersionDate("2026-05-12")
+		require.True(t, ok)
+		require.Equal(t, time.Date(2026, time.May, 12, 0, 0, 0, 0, time.UTC), parsed)
+	})
+
+	t.Run("rfc3339", func(t *testing.T) {
+		parsed, ok := parseMapPolicyVersionDate("2026-05-12T22:30:00-04:00")
+		require.True(t, ok)
+		require.Equal(t, time.Date(2026, time.May, 13, 0, 0, 0, 0, time.UTC), parsed)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		_, ok := parseMapPolicyVersionDate("2026/05/12")
+		require.False(t, ok)
+	})
 }

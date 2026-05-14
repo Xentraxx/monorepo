@@ -1096,6 +1096,31 @@ func TestInstallMapRejectsIncompatibleGameVersion(t *testing.T) {
 	require.Contains(t, response.Message, "not compatible with current game version")
 }
 
+func TestInstallMapRejectsInvalidCurrentGameVersion(t *testing.T) {
+	d, reg, _ := newConfiguredDownloader(t, true)
+	d.GetGameVersion = func() types.GameVersionResponse {
+		return types.GameVersionResponse{
+			GenericResponse: types.SuccessResponse("Game version loaded"),
+			Version:         "definitely-not-semver",
+		}
+	}
+
+	cleanup := registrytest.MockRegistryServer(t, reg, []registrytest.UpdateFixture{
+		{AssetID: "map-a", AssetType: types.AssetTypeMap, Versions: []string{"1.0.0"}, MapCode: "AAA"},
+	})
+	defer cleanup()
+
+	response := d.InstallAsset(types.InstallAssetRequest{
+		AssetType: types.AssetTypeMap,
+		AssetID:   "map-a",
+		Version:   "1.0.0",
+	})
+
+	require.Equal(t, types.ResponseError, response.Status)
+	require.Equal(t, types.InstallErrorIncompatibleGameVersion, response.ErrorType)
+	require.Contains(t, response.Message, "Failed to parse current game version")
+}
+
 func TestMapContractFilesWritten(t *testing.T) {
 	testCases := []struct {
 		name          string

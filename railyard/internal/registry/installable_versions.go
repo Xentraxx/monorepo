@@ -98,21 +98,7 @@ func applyMapGameVersionPolicy(versions []types.VersionInfo) {
 
 func isOnOrBeforeMapSchemaCompatibilityCutoff(rawDate string) bool {
 	publishedAt, ok := parseMapPolicyVersionDate(rawDate)
-	if !ok {
-		return false
-	}
-
-	publishedDay := time.Date(
-		publishedAt.UTC().Year(),
-		publishedAt.UTC().Month(),
-		publishedAt.UTC().Day(),
-		0,
-		0,
-		0,
-		0,
-		time.UTC,
-	)
-	return !publishedDay.After(mapSchemaCompatibilityCutoff)
+	return ok && !publishedAt.After(mapSchemaCompatibilityCutoff)
 }
 
 func parseMapPolicyVersionDate(rawDate string) (time.Time, bool) {
@@ -121,19 +107,22 @@ func parseMapPolicyVersionDate(rawDate string) (time.Time, bool) {
 		return time.Time{}, false
 	}
 
-	layouts := []string{
-		time.RFC3339,
-		time.RFC3339Nano,
-		"2006-01-02",
-	}
-	for _, layout := range layouts {
-		parsed, err := time.Parse(layout, trimmed)
-		if err == nil {
-			return parsed, true
-		}
+	layout := time.DateOnly
+	if strings.Contains(trimmed, "T") {
+		layout = time.RFC3339Nano
 	}
 
-	return time.Time{}, false
+	parsed, err := time.Parse(layout, trimmed)
+	if err != nil {
+		return time.Time{}, false
+	}
+
+	parsed = parsed.UTC()
+	if layout == time.DateOnly {
+		return parsed, true
+	}
+
+	return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, time.UTC), true
 }
 
 // GetInstallableVersions returns the integrity-approved versions for an asset.

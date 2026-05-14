@@ -924,29 +924,34 @@ func (d *Downloader) ensureAssetGameVersionCompatible(assetType types.AssetType,
 		return nil
 	}
 
+	incompatibleGameVersion := func(message string, err error, args ...any) *types.AssetInstallResponse {
+		resp := d.installError(assetType, assetID, version, types.ConfigData{}, types.InstallErrorIncompatibleGameVersion, message, err, append([]any{"asset_id", assetID}, args...)...)
+		return &resp
+	}
+
 	gameVersionResp := d.GetGameVersion()
-	if gameVersionResp.Status != types.ResponseSuccess || strings.TrimSpace(gameVersionResp.Version) == "" {
+	if gameVersionResp.Status != types.ResponseSuccess {
 		return nil
+	}
+
+	gameVersion := strings.TrimSpace(gameVersionResp.Version)
+	if gameVersion == "" {
+		return incompatibleGameVersion("Current game version is empty", nil)
 	}
 
 	constraint, err := semver.NewConstraint(strings.TrimPrefix(requiredRange, "v"))
 	if err != nil {
-		resp := d.installError(assetType, assetID, version, types.ConfigData{}, types.InstallErrorIncompatibleGameVersion, "Failed to parse game version constraint", err, "asset_id", assetID, "constraint", requiredRange)
-		return &resp
+		return incompatibleGameVersion("Failed to parse game version constraint", err, "constraint", requiredRange)
 	}
 
-	currentVersion, err := semver.NewVersion(strings.TrimPrefix(gameVersionResp.Version, "v"))
+	currentVersion, err := semver.NewVersion(strings.TrimPrefix(gameVersion, "v"))
 	if err != nil {
-		resp := d.installError(assetType, assetID, version, types.ConfigData{}, types.InstallErrorIncompatibleGameVersion, "Failed to parse current game version", err, "asset_id", assetID, "constraint", requiredRange, "game_version", gameVersionResp.Version)
-		return &resp
+		return incompatibleGameVersion("Failed to parse current game version", err, "constraint", requiredRange, "game_version", gameVersion)
 	}
-
 	if constraint.Check(currentVersion) {
 		return nil
 	}
-
-	resp := d.installError(assetType, assetID, version, types.ConfigData{}, types.InstallErrorIncompatibleGameVersion, "Asset is not compatible with current game version", nil, "asset_id", assetID, "constraint", requiredRange, "game_version", gameVersionResp.Version)
-	return &resp
+	return incompatibleGameVersion("Asset is not compatible with current game version", nil, "constraint", requiredRange, "game_version", gameVersion)
 }
 
 func (d *Downloader) installModDependencies(ctx context.Context, modID string, version string, versionInfo types.VersionInfo) *types.AssetInstallResponse {
