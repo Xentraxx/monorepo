@@ -920,18 +920,18 @@ func (d *Downloader) ensureModDependencies(ctx context.Context, modID string, ve
 }
 
 func (d *Downloader) ensureAssetGameVersionCompatible(assetType types.AssetType, assetID string, version string, requiredRange string) *types.AssetInstallResponse {
-	if d.GetGameVersion == nil || strings.TrimSpace(requiredRange) == "" {
-		return nil
-	}
-
 	incompatibleGameVersion := func(message string, err error, args ...any) *types.AssetInstallResponse {
 		resp := d.installError(assetType, assetID, version, types.ConfigData{}, types.InstallErrorIncompatibleGameVersion, message, err, append([]any{"asset_id", assetID}, args...)...)
 		return &resp
 	}
 
+	if d.GetGameVersion == nil {
+		return incompatibleGameVersion("Failed to resolve current game version", nil)
+	}
+
 	gameVersionResp := d.GetGameVersion()
 	if gameVersionResp.Status != types.ResponseSuccess {
-		return nil
+		return incompatibleGameVersion("Failed to resolve current game version", nil, "status", gameVersionResp.Status)
 	}
 
 	gameVersion := strings.TrimSpace(gameVersionResp.Version)
@@ -939,14 +939,22 @@ func (d *Downloader) ensureAssetGameVersionCompatible(assetType types.AssetType,
 		return incompatibleGameVersion("Current game version is empty", nil)
 	}
 
-	constraint, err := semver.NewConstraint(strings.TrimPrefix(requiredRange, "v"))
-	if err != nil {
-		return incompatibleGameVersion("Failed to parse game version constraint", err, "constraint", requiredRange)
-	}
-
 	currentVersion, err := semver.NewVersion(strings.TrimPrefix(gameVersion, "v"))
 	if err != nil {
 		return incompatibleGameVersion("Failed to parse current game version", err, "constraint", requiredRange, "game_version", gameVersion)
+	}
+
+	requiredRange = strings.TrimSpace(requiredRange)
+	if requiredRange == "" {
+		if !currentVersion.GreaterThan(semver.MustParse("1.3.0")) {
+			return nil
+		}
+		return incompatibleGameVersion("Asset is missing required game version constraint", nil, "game_version", gameVersion)
+	}
+
+	constraint, err := semver.NewConstraint(strings.TrimPrefix(requiredRange, "v"))
+	if err != nil {
+		return incompatibleGameVersion("Failed to parse game version constraint", err, "constraint", requiredRange)
 	}
 	if constraint.Check(currentVersion) {
 		return nil

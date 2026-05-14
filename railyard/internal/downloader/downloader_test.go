@@ -127,6 +127,12 @@ func newConfiguredDownloader(t *testing.T, withValidConfig bool) (*Downloader, *
 		Config:      cfg,
 		Logger:      logger.LoggerAtPath(""),
 		OnCancelled: func(string, types.AssetType, string) {},
+		GetGameVersion: func() types.GameVersionResponse {
+			return types.GameVersionResponse{
+				GenericResponse: types.SuccessResponse("Game version loaded"),
+				Version:         "1.3.0",
+			}
+		},
 	}
 	d.tempPath = t.TempDir()
 	d.mapTilePath = t.TempDir()
@@ -673,6 +679,12 @@ func TestCancelDuringExtractRemovesInstalledFiles(t *testing.T) {
 		Config:      cfg,
 		Logger:      logger.LoggerAtPath(""),
 		OnCancelled: func(string, types.AssetType, string) {}, // no-op for testing
+		GetGameVersion: func() types.GameVersionResponse {
+			return types.GameVersionResponse{
+				GenericResponse: types.SuccessResponse("Game version loaded"),
+				Version:         "1.3.0",
+			}
+		},
 	}
 	d.tempPath = t.TempDir()
 	d.mapTilePath = d.getMapTilePath()
@@ -1119,6 +1131,121 @@ func TestInstallMapRejectsInvalidCurrentGameVersion(t *testing.T) {
 	require.Equal(t, types.ResponseError, response.Status)
 	require.Equal(t, types.InstallErrorIncompatibleGameVersion, response.ErrorType)
 	require.Contains(t, response.Message, "Failed to parse current game version")
+}
+
+func TestEnsureAssetGameVersionCompatible(t *testing.T) {
+	testCases := []struct {
+		name            string
+		getGameVersion  GameVersionFunc
+		requiredRange   string
+		expectError     bool
+		expectedMessage string
+	}{
+		{
+			name: "allows valid explicit constraint match",
+			getGameVersion: func() types.GameVersionResponse {
+				return types.GameVersionResponse{
+					GenericResponse: types.SuccessResponse("Game version loaded"),
+					Version:         "1.3.0",
+				}
+			},
+			requiredRange: ">=1.0.0 <=1.3.0",
+		},
+		{
+			name: "allows missing constraint at or below 1.3.0",
+			getGameVersion: func() types.GameVersionResponse {
+				return types.GameVersionResponse{
+					GenericResponse: types.SuccessResponse("Game version loaded"),
+					Version:         "1.3.0",
+				}
+			},
+			requiredRange: "",
+		},
+		{
+			name:            "rejects missing resolver",
+			getGameVersion:  nil,
+			requiredRange:   ">=1.0.0",
+			expectError:     true,
+			expectedMessage: "Failed to resolve current game version",
+		},
+		{
+			name: "rejects failed resolver response",
+			getGameVersion: func() types.GameVersionResponse {
+				return types.GameVersionResponse{
+					GenericResponse: types.ErrorResponse("missing"),
+				}
+			},
+			requiredRange:   ">=1.0.0",
+			expectError:     true,
+			expectedMessage: "Failed to resolve current game version",
+		},
+		{
+			name: "rejects invalid game version",
+			getGameVersion: func() types.GameVersionResponse {
+				return types.GameVersionResponse{
+					GenericResponse: types.SuccessResponse("Game version loaded"),
+					Version:         "not-semver",
+				}
+			},
+			requiredRange:   ">=1.0.0",
+			expectError:     true,
+			expectedMessage: "Failed to parse current game version",
+		},
+		{
+			name: "rejects invalid constraint",
+			getGameVersion: func() types.GameVersionResponse {
+				return types.GameVersionResponse{
+					GenericResponse: types.SuccessResponse("Game version loaded"),
+					Version:         "1.3.0",
+				}
+			},
+			requiredRange:   "not-a-constraint",
+			expectError:     true,
+			expectedMessage: "Failed to parse game version constraint",
+		},
+		{
+			name: "rejects missing constraint above 1.3.0",
+			getGameVersion: func() types.GameVersionResponse {
+				return types.GameVersionResponse{
+					GenericResponse: types.SuccessResponse("Game version loaded"),
+					Version:         "1.3.1",
+				}
+			},
+			requiredRange:   "",
+			expectError:     true,
+			expectedMessage: "Asset is missing required game version constraint",
+		},
+		{
+			name: "rejects unsatisfied explicit constraint",
+			getGameVersion: func() types.GameVersionResponse {
+				return types.GameVersionResponse{
+					GenericResponse: types.SuccessResponse("Game version loaded"),
+					Version:         "1.3.1",
+				}
+			},
+			requiredRange:   "<=1.3.0",
+			expectError:     true,
+			expectedMessage: "Asset is not compatible with current game version",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := newTestDownloader()
+			d.GetGameVersion = tc.getGameVersion
+
+			response := d.ensureAssetGameVersionCompatible(types.AssetTypeMap, "map-a", "1.0.0", tc.requiredRange)
+			if !tc.expectError {
+				require.Nil(t, response)
+				return
+			}
+
+			require.NotNil(t, response)
+			require.Equal(t, types.ResponseError, response.Status)
+			require.Equal(t, types.InstallErrorIncompatibleGameVersion, response.ErrorType)
+			require.Contains(t, response.Message, tc.expectedMessage)
+		})
+	}
 }
 
 func TestMapContractFilesWritten(t *testing.T) {
