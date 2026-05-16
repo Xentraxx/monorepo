@@ -52,6 +52,12 @@ func userProfilesServiceWithDependencies(t *testing.T) (*UserProfiles, *config.C
 	l := testUserProfilesLogger(t)
 	reg := registry.NewRegistry(l, cfg)
 	dl := downloader.NewDownloader(cfg, reg, l)
+	dl.GetGameVersion = func() types.GameVersionResponse {
+		return types.GameVersionResponse{
+			GenericResponse: types.SuccessResponse("Game version loaded"),
+			Version:         "1.3.0",
+		}
+	}
 	return NewUserProfiles(reg, dl, l, cfg), cfg, reg
 }
 
@@ -85,6 +91,7 @@ type registryFixture struct {
 	assetID            string
 	assetType          types.AssetType
 	versions           []string
+	gameVersion        string
 	mapCode            string
 	failVersions       bool
 	missingModManifest bool
@@ -129,6 +136,7 @@ func mockRegistry(t *testing.T, reg *registry.Registry, fixtures []registryFixtu
 			AssetID:            f.assetID,
 			AssetType:          f.assetType,
 			Versions:           f.versions,
+			GameVersion:        f.gameVersion,
 			MapCode:            f.mapCode,
 			FailVersions:       f.failVersions,
 			MissingModManifest: f.missingModManifest,
