@@ -37,6 +37,17 @@ const COUNTRY_SEARCH_OVERRIDES: Record<string, CountrySearchOverride> = {
 
 const countrySearchTermCache = new Map<string, string[]>();
 
+export function normalizeCountryCode(
+  code: string | null | undefined,
+): string | undefined {
+  const normalized = (code ?? '').trim().toUpperCase();
+  return COUNTRY_CODE_PATTERN.test(normalized) ? normalized : undefined;
+}
+
+export function normalizeMapCountry(country: string | null | undefined): string {
+  return normalizeCountryCode(country) ?? '';
+}
+
 function uniqueTerms(values: string[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
@@ -86,8 +97,8 @@ function getCountryEndonym(code: string): string | undefined {
 }
 
 export function reverseIsoCountryCodeToNames(code: string): string[] {
-  const normalized = code.trim().toUpperCase();
-  if (!COUNTRY_CODE_PATTERN.test(normalized)) {
+  const normalized = normalizeCountryCode(code);
+  if (!normalized) {
     return [];
   }
 
@@ -112,10 +123,6 @@ export function reverseIsoCountryCodeToNames(code: string): string[] {
 export function buildCountryCodeSearchTerms(
   country: string | null | undefined,
 ): string[] {
-  const normalized = (country ?? '').trim();
-  if (!normalized || !COUNTRY_CODE_PATTERN.test(normalized)) {
-    return [];
-  }
-
-  return reverseIsoCountryCodeToNames(normalized);
+  const normalized = normalizeCountryCode(country);
+  return normalized ? reverseIsoCountryCodeToNames(normalized) : [];
 }

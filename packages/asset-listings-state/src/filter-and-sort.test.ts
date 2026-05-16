@@ -14,6 +14,7 @@ import {
 } from './filter-and-sort';
 import {
   buildCountryCodeSearchTerms,
+  normalizeMapCountry,
   reverseIsoCountryCodeToNames,
 } from './country-search';
 
@@ -223,6 +224,13 @@ describe('filter helpers', () => {
 });
 
 describe('country search helpers', () => {
+  it('normalizes ISO country codes once at the manifest boundary', () => {
+    expect(normalizeMapCountry(' cz ')).toBe('CZ');
+    expect(normalizeMapCountry(' Ukraine ')).toBe('');
+    expect(normalizeMapCountry('1!')).toBe('');
+    expect(normalizeMapCountry(undefined)).toBe('');
+  });
+
   it('expands ISO country codes into exonym and endonym search terms', () => {
     const czechEndonym = getRegionEndonym('cs-CZ', 'CZ');
     const ukrainianEndonym = getRegionEndonym('uk-UA', 'UA');

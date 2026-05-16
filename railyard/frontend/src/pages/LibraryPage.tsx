@@ -20,6 +20,7 @@ import {
   SOURCE_QUALITY_VALUES,
 } from '@subway-builder-modded/config';
 import { PER_PAGE_OPTIONS } from '@subway-builder-modded/config';
+import { normalizeMapCountry } from '@subway-builder-modded/asset-listings-state';
 import { Button } from '@subway-builder-modded/shared-ui';
 import { AppDialog } from '@subway-builder-modded/shared-ui';
 import { getLocalAccentClasses } from '@subway-builder-modded/shared-ui';
@@ -103,7 +104,7 @@ function localMapManifestFromInstalled(
       config.creator,
     ),
     city_code: config.code,
-    country: config.country ?? '',
+    country: normalizeMapCountry(config.country),
     location: '',
     population: config.population,
     data_source: '',

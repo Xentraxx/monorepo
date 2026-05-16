@@ -919,29 +919,39 @@ func (d *Downloader) ensureModDependencies(ctx context.Context, modID string, ve
 	return d.installModDependencies(ctx, modID, version, versionInfo)
 }
 
-func (d *Downloader) ensureAssetGameVersionCompatible(assetType types.AssetType, assetID string, version string, requiredRange string) *types.AssetInstallResponse {
+func (d *Downloader) resolveCurrentGameVersion(assetType types.AssetType, assetID string, version string, requiredRange string) (string, *semver.Version, *types.AssetInstallResponse) {
 	incompatibleGameVersion := func(message string, err error, args ...any) *types.AssetInstallResponse {
 		resp := d.installError(assetType, assetID, version, types.ConfigData{}, types.InstallErrorIncompatibleGameVersion, message, err, append([]any{"asset_id", assetID}, args...)...)
 		return &resp
 	}
 
 	if d.GetGameVersion == nil {
-		return incompatibleGameVersion("Failed to resolve current game version", nil)
+		return "", nil, incompatibleGameVersion("Failed to resolve current game version", nil)
 	}
 
 	gameVersionResp := d.GetGameVersion()
 	if gameVersionResp.Status != types.ResponseSuccess {
-		return incompatibleGameVersion("Failed to resolve current game version", nil, "status", gameVersionResp.Status)
+		return "", nil, incompatibleGameVersion("Failed to resolve current game version", nil, "status", gameVersionResp.Status)
 	}
 
 	gameVersion := strings.TrimSpace(gameVersionResp.Version)
-	if gameVersion == "" {
-		return incompatibleGameVersion("Current game version is empty", nil)
-	}
-
 	currentVersion, err := semver.NewVersion(strings.TrimPrefix(gameVersion, "v"))
 	if err != nil {
-		return incompatibleGameVersion("Failed to parse current game version", err, "constraint", requiredRange, "game_version", gameVersion)
+		return "", nil, incompatibleGameVersion("Failed to parse current game version", err, "constraint", requiredRange, "game_version", gameVersion)
+	}
+
+	return gameVersion, currentVersion, nil
+}
+
+func (d *Downloader) ensureAssetGameVersionCompatible(assetType types.AssetType, assetID string, version string, requiredRange string) *types.AssetInstallResponse {
+	incompatibleGameVersion := func(message string, err error, args ...any) *types.AssetInstallResponse {
+		resp := d.installError(assetType, assetID, version, types.ConfigData{}, types.InstallErrorIncompatibleGameVersion, message, err, append([]any{"asset_id", assetID}, args...)...)
+		return &resp
+	}
+
+	gameVersion, currentVersion, errResp := d.resolveCurrentGameVersion(assetType, assetID, version, requiredRange)
+	if errResp != nil {
+		return errResp
 	}
 
 	requiredRange = strings.TrimSpace(requiredRange)

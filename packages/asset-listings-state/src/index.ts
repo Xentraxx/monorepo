@@ -15,6 +15,8 @@ export {
 } from './filter-and-sort';
 export {
 	buildCountryCodeSearchTerms,
+	normalizeCountryCode,
+	normalizeMapCountry,
 	reverseIsoCountryCodeToNames,
 } from './country-search';
 export {
