@@ -1,13 +1,34 @@
 const COUNTRY_CODE_PATTERN = /^[A-Za-z]{2}$/;
+const ENGLISH_REGION_NAMES = new Intl.DisplayNames(['en'], { type: 'region' });
 
-const COUNTRY_SEARCH_OVERRIDES: Record<
-  string,
-  {
-    exonym?: string;
-    endonym?: string;
-    aliases?: string[];
-  }
-> = {
+type CountrySearchOverride = {
+  exonym?: string;
+  endonym?: string;
+  aliases?: string[];
+};
+
+const COUNTRY_SEARCH_OVERRIDES: Record<string, CountrySearchOverride> = {
+  CI: {
+    aliases: ['Ivory Coast'],
+  },
+  CZ: {
+    aliases: ['Czech Republic'],
+  },
+  GB: {
+    aliases: ['UK', 'Britain', 'Great Britain'],
+  },
+  MK: {
+    aliases: ['Macedonia'],
+  },
+  MM: {
+    aliases: ['Burma'],
+  },
+  SZ: {
+    aliases: ['Swaziland'],
+  },
+  TL: {
+    aliases: ['East Timor'],
+  },
   XK: {
     exonym: 'Kosovo',
     endonym: 'Kosove',
@@ -42,9 +63,10 @@ function toSearchTermVariants(value: string): string[] {
 
 function getRegionName(locale: string, code: string): string | undefined {
   try {
-    const displayName = new Intl.DisplayNames([locale], {
-      type: 'region',
-    }).of(code);
+    const displayName =
+      locale === 'en'
+        ? ENGLISH_REGION_NAMES.of(code)
+        : new Intl.DisplayNames([locale], { type: 'region' }).of(code);
     if (!displayName || displayName.toUpperCase() === code) {
       return undefined;
     }

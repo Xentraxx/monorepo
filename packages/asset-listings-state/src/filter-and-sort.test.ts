@@ -228,13 +228,21 @@ describe('country search helpers', () => {
     const ukrainianEndonym = getRegionEndonym('uk-UA', 'UA');
 
     expect(reverseIsoCountryCodeToNames('CZ')).toEqual(
-      expect.arrayContaining(['CZ', 'Czechia', czechEndonym ?? '']),
+      expect.arrayContaining([
+        'CZ',
+        'Czechia',
+        'Czech Republic',
+        czechEndonym ?? '',
+      ]),
     );
     if (czechEndonym) {
       expect(reverseIsoCountryCodeToNames('CZ')).toContain(foldAscii(czechEndonym));
     }
     expect(reverseIsoCountryCodeToNames('UA')).toEqual(
       expect.arrayContaining(['UA', 'Ukraine', ukrainianEndonym ?? '']),
+    );
+    expect(reverseIsoCountryCodeToNames('GB')).toEqual(
+      expect.arrayContaining(['GB', 'United Kingdom', 'UK']),
     );
   });
 

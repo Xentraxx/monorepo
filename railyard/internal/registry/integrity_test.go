@@ -122,7 +122,7 @@ func TestGetInstallableVersionsPreservesExplicitMapGameVersion(t *testing.T) {
 		},
 	}
 	reg.setCachedVersions("custom|https://example.com/update.json", []types.VersionInfo{
-		{Version: "1.1.0", GameVersion: ">=1.0.0 <=1.3.1", Date: "2026-05-13"},
+		{Version: "1.1.0", GameVersion: ">=1.0.0 <=1.3.1", Date: "2026-05-19"},
 	})
 
 	filtered, err := reg.GetInstallableVersions(types.AssetTypeMap, "map-a")
@@ -157,7 +157,7 @@ func TestGetInstallableVersionsCapsExplicitMapGameVersionOnSchemaCutoffOrEarlier
 		},
 	}
 	reg.setCachedVersions("custom|https://example.com/update.json", []types.VersionInfo{
-		{Version: "1.1.0", GameVersion: ">=1.0.0 <=1.4.0", Date: "2026-05-12"},
+		{Version: "1.1.0", GameVersion: ">=1.0.0 <=1.4.0", Date: "2026-05-18"},
 	})
 
 	filtered, err := reg.GetInstallableVersions(types.AssetTypeMap, "map-a")
@@ -168,15 +168,15 @@ func TestGetInstallableVersionsCapsExplicitMapGameVersionOnSchemaCutoffOrEarlier
 
 func TestParseMapPolicyVersionDate(t *testing.T) {
 	t.Run("date only", func(t *testing.T) {
-		parsed, ok := parseMapPolicyVersionDate("2026-05-12")
+		parsed, ok := parseMapPolicyVersionDate("2026-05-18")
 		require.True(t, ok)
-		require.Equal(t, time.Date(2026, time.May, 12, 0, 0, 0, 0, time.UTC), parsed)
+		require.Equal(t, time.Date(2026, time.May, 18, 0, 0, 0, 0, time.UTC), parsed)
 	})
 
 	t.Run("rfc3339", func(t *testing.T) {
-		parsed, ok := parseMapPolicyVersionDate("2026-05-12T22:30:00-04:00")
+		parsed, ok := parseMapPolicyVersionDate("2026-05-18T22:30:00-04:00")
 		require.True(t, ok)
-		require.Equal(t, time.Date(2026, time.May, 13, 0, 0, 0, 0, time.UTC), parsed)
+		require.Equal(t, time.Date(2026, time.May, 19, 0, 0, 0, 0, time.UTC), parsed)
 	})
 
 	t.Run("invalid", func(t *testing.T) {

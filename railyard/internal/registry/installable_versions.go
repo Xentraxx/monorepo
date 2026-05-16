@@ -9,7 +9,7 @@ import (
 	"railyard/internal/types"
 )
 
-var mapSchemaCompatibilityCutoff = time.Date(2026, time.May, 12, 0, 0, 0, 0, time.UTC)
+var mapSchemaCompatibilityCutoff = time.Date(2026, time.May, 18, 0, 0, 0, 0, time.UTC)
 
 // getIntegrityListing returns the integrity entry for the requested asset.
 func (r *Registry) getIntegrityListing(assetType types.AssetType, assetID string) (types.IntegrityListing, bool) {
@@ -90,8 +90,9 @@ func applyMapGameVersionPolicy(versions []types.VersionInfo) {
 		}
 
 		// Subway Builder 1.3.1 introduces a schema-breaking map change. Keep the
-		// 2026-05-12 cutoff hardcoded so any map published on or before that date
-		// stays capped at 1.3.0 unless the policy is intentionally revised here.
+		// 2026-05-18 (Monday) cutoff hardcoded so any map published on or before
+		// that date stays capped at 1.3.0 unless the policy is intentionally
+		// revised here.
 		versions[i].GameVersion = strings.TrimSpace(versions[i].GameVersion + " " + constants.DefaultMapGameVersionConstraint)
 	}
 }
