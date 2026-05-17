@@ -48,9 +48,7 @@ async function fetchManifest<T>(type: 'mods' | 'maps', id: string): Promise<T> {
   const manifest = await fetchRegistryJsonWithFallback<T>(
     `${type}/${id}/manifest.json`,
   );
-  return normalizeRegistryManifest(
-    manifest as ModManifest | MapManifest,
-  ) as T;
+  return normalizeRegistryManifest(manifest as ModManifest | MapManifest) as T;
 }
 
 async function fetchIntegrity(
