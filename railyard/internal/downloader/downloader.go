@@ -919,59 +919,6 @@ func (d *Downloader) ensureModDependencies(ctx context.Context, modID string, ve
 	return d.installModDependencies(ctx, modID, version, versionInfo)
 }
 
-func (d *Downloader) resolveCurrentGameVersion(assetType types.AssetType, assetID string, version string, requiredRange string) (string, *semver.Version, *types.AssetInstallResponse) {
-	incompatibleGameVersion := func(message string, err error, args ...any) *types.AssetInstallResponse {
-		resp := d.installError(assetType, assetID, version, types.ConfigData{}, types.InstallErrorIncompatibleGameVersion, message, err, append([]any{"asset_id", assetID}, args...)...)
-		return &resp
-	}
-
-	if d.GetGameVersion == nil {
-		return "", nil, incompatibleGameVersion("Failed to resolve current game version", nil)
-	}
-
-	gameVersionResp := d.GetGameVersion()
-	if gameVersionResp.Status != types.ResponseSuccess {
-		return "", nil, incompatibleGameVersion("Failed to resolve current game version", nil, "status", gameVersionResp.Status)
-	}
-
-	gameVersion := strings.TrimSpace(gameVersionResp.Version)
-	currentVersion, err := semver.NewVersion(strings.TrimPrefix(gameVersion, "v"))
-	if err != nil {
-		return "", nil, incompatibleGameVersion("Failed to parse current game version", err, "constraint", requiredRange, "game_version", gameVersion)
-	}
-
-	return gameVersion, currentVersion, nil
-}
-
-func (d *Downloader) ensureAssetGameVersionCompatible(assetType types.AssetType, assetID string, version string, requiredRange string) *types.AssetInstallResponse {
-	incompatibleGameVersion := func(message string, err error, args ...any) *types.AssetInstallResponse {
-		resp := d.installError(assetType, assetID, version, types.ConfigData{}, types.InstallErrorIncompatibleGameVersion, message, err, append([]any{"asset_id", assetID}, args...)...)
-		return &resp
-	}
-
-	gameVersion, currentVersion, errResp := d.resolveCurrentGameVersion(assetType, assetID, version, requiredRange)
-	if errResp != nil {
-		return errResp
-	}
-
-	requiredRange = strings.TrimSpace(requiredRange)
-	if requiredRange == "" {
-		if !currentVersion.GreaterThan(semver.MustParse("1.3.0")) {
-			return nil
-		}
-		return incompatibleGameVersion("Asset is missing required game version constraint", nil, "game_version", gameVersion)
-	}
-
-	constraint, err := semver.NewConstraint(strings.TrimPrefix(requiredRange, "v"))
-	if err != nil {
-		return incompatibleGameVersion("Failed to parse game version constraint", err, "constraint", requiredRange)
-	}
-	if constraint.Check(currentVersion) {
-		return nil
-	}
-	return incompatibleGameVersion("Asset is not compatible with current game version", nil, "constraint", requiredRange, "game_version", gameVersion)
-}
-
 func (d *Downloader) installModDependencies(ctx context.Context, modID string, version string, versionInfo types.VersionInfo) *types.AssetInstallResponse {
 	deps := d.ComputeDependencyList(modID, versionInfo)
 	if deps.Status == types.ResponseError {
@@ -1050,9 +997,6 @@ func (d *Downloader) installMapNow(ctx context.Context, mapId string, version st
 	}
 	if versionInfo == nil {
 		return d.installError(types.AssetTypeMap, mapId, version, types.ConfigData{}, types.InstallErrorVersionNotFound, "Specified version not found for map", nil, "map_id", mapId, "version", version, "available_versions", availableVersions)
-	}
-	if compatibilityResp := d.ensureAssetGameVersionCompatible(types.AssetTypeMap, mapId, version, versionInfo.GameVersion); compatibilityResp != nil {
-		return *compatibilityResp
 	}
 
 	d.Logger.Info("Downloading map", "map_id", mapId, "version", version, "download_url", versionInfo.DownloadURL)

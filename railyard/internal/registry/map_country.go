@@ -2,6 +2,7 @@ package registry
 
 import "strings"
 
+// normalizeMapCountry returns a canonical ISO-style country code or an empty string.
 func normalizeMapCountry(country string) string {
 	country = strings.TrimSpace(country)
 	if len(country) != 2 {

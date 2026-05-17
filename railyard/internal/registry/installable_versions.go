@@ -78,6 +78,7 @@ func (r *Registry) filterVersionsByIntegrity(
 	return filtered, nil
 }
 
+// applyMapGameVersionPolicy enforces map-specific compatibility defaults and cutoffs.
 func applyMapGameVersionPolicy(versions []types.VersionInfo) {
 	for i := range versions {
 		if strings.TrimSpace(versions[i].GameVersion) == "" {
@@ -97,11 +98,13 @@ func applyMapGameVersionPolicy(versions []types.VersionInfo) {
 	}
 }
 
+// isOnOrBeforeMapSchemaCompatibilityCutoff reports whether the version date falls on or before the schema cutoff.
 func isOnOrBeforeMapSchemaCompatibilityCutoff(rawDate string) bool {
 	publishedAt, ok := parseMapPolicyVersionDate(rawDate)
 	return ok && !publishedAt.After(mapSchemaCompatibilityCutoff)
 }
 
+// parseMapPolicyVersionDate parses supported version date formats into a UTC day value.
 func parseMapPolicyVersionDate(rawDate string) (time.Time, bool) {
 	trimmed := strings.TrimSpace(rawDate)
 	if trimmed == "" {
